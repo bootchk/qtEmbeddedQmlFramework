@@ -1,0 +1,154 @@
+
+Copyright 2015 Lloyd Konneker
+
+Licensed under GPLv3.
+
+Classes to support embedding QML in a QWidget app.
+Embedding means the outer app is implemented in PyQt (or C++) using QWidgets,
+and the inner app is implemented in QML displayed in QQuickViews.
+In other words, the app is a QApplication having QQuickViews that embed QML.
+
+The main impetus for this is that Qt is moving towards QML.
+On mobile platforms (at least on iOS) the OS does not expose a 'style API' to Qt
+(as it does on the desktop platforms.)
+So QWidget implementations have non-conformant look-and-feel,
+while QML implementations have look-and-feel somewhat more conformant to platform HIG.
+
+A downside is that in QML many OS capabilities (such as file and print dialogs) are missing or weak.
+
+
+Status
+------
+
+Work in progress.  Use at your own risk.  
+
+I have other projects (i.e. qtPrintFramework) that use this project, so it is functional.
+But I would not say it is complete: I hope to make it a better library/component/package.
+
+
+Delegate/Adaptor
+----------------
+
+The app defines delegate classes/types.
+The delegate types are not part of this framework (except for QmlDelegate.)
+The framework only defines how the delegate types are instantiated and managed.
+
+A delegate type is in adaptor between QML and and business logic (which may include GUI using QWidgets.)
+Adaption is two-way: 
+- QML signals and changes properties in the adaptor, which flows to the business side.
+- business logic signals and changes properties in the adaptor, which flows to the QML side.
+
+Diagram showing one delegate/adaptor:
+
+QML <-> delegate/adaptor <-> model/business logic/QWidget GUI
+
+Using the MVC paradigm, the delegate can be the *model*.
+The delegate usually has an 'edit' method, which shows the *view*/*control* (the QML GUI).
+But it might be better for the delegate to be thin, i.e. to delegate most model or business logic
+to other classes.
+
+
+QmlDelegate
+-----------
+The framework defines a class QmlDelegate.
+
+QmlDelegate shows the most basic API.
+The API is three signals: [openView, accepted, and rejected] and corresponding method/slots.
+The app calls the openView() method to emit the openView signal, which QML connects to
+(and upon receiving, shows a view.)
+The QML calls the accept() and reject() methods to emit the corresponding signals which the app connects to.
+So it is a delegate/adaptor: every signal goes through it, i.e. is relayed or delegated.
+It is simple because the only information to the app is: whether the user accepted/rejected.
+In other words, for a simple Alert dialog.
+
+QmlDelegate works where the model has no properties read/written by the view.
+I intended it to be a mixin, but experienced problems with that (unresolved.)
+So you will probably want to define your own delegate classes, copying the API from QmlDelegate.
+You will probably also add properties to the delegate (pyqtProperty) that the view is on or controls.
+The delegate's properties could in turn be adapted to other properties in a separate model, but that is not required.
+In other words, you can take a model from your app and convert it's GUI to QML by adding the QmlDelegate API
+(and adding QML that understands the model.)
+The QML will bind to the properties (again pyqtProperty, not just Python property) of the model/delegate.
+
+
+Delegate management
+-------------------
+The framework manages a set of delegates.
+There is usually one delegate for each business object class (mostly having its own view/GUI.)
+
+The delegate types are registered so they are visible to the embedded QML.
+The embedded QML creates an instance of each of the delegate types.
+The framework 'finds' the delegates in the Qt object tree, from the business side.
+(Somewhat arbitrary design decision: an alternative is for the business side to create the delegate instances,
+and set them in the context of the QML.)
+
+The framework stores delegate instances in a dictionary which is passed (somewhat arbitrary design decision with some overhead.)
+Delegate instances are named.
+The framework itself does not store delegate instances.
+The app subsequently refers to the delegate using delegates[delegateName].
+
+The framework also stores references to QQuickViews (so they do not go out of scope and get garbage collected.)
+Usually an app does not need to refer to the QQuickViews.
+
+
+How an app uses delegates
+-------------------------
+
+On app startup, app must call resourceMgr.setResourceRoot
+
+After using the framework to create a set of delegates, the app can:
+- from business logic (or QWidget GUI) to QML
+-- 'show' or 'edit' the QML gui
+-- connect model/business signals to the delegate to enable QML Actions
+- from QML to business
+-- connect QML signals to delegate to propagate changes to the model/business logic (or to QWidget GUI.)
+
+
+Resources
+---------
+
+The framework also knows a canonical (conventional) way to find the QML files in resources.
+The canonical way is to structure your app directory like this:
+  
+  app/    the project directory
+     app/  the app's package
+        resources/  the app's resources
+            qml/  the app's resources of type qml
+               foo.qml
+            translations/  the app's translation resources of type qm
+               bar.qm
+        subpackage/  a subpackage of the app
+        config.py    a conventional module for configuring the app
+     app.py     the main app executable
+   
+
+
+Typical QML
+-----------
+
+A snippet of foo.qml file which implements a view for a delegate/model:
+
+import Delegate 1.0 // Registered by business side
+
+Item{
+  property var delegate: Delegate {
+      id: delegate
+      objectName: "delegate" # required by framework so it can find it
+    }
+   ...
+   // qml implementing view e.g.
+   Dialog {
+     id: dialog
+     ...
+   }
+   
+   // Connect delegate to view
+   Connections {
+     target: delegate
+     onOpenView: {
+        dialog.open()
+        // OR menu.popup()
+     }
+}
+
+
