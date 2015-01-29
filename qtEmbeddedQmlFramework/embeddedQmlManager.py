@@ -27,10 +27,11 @@ class EmbeddedQmlManager(object):
   References to all object instances created by self are kept in delegates OR self.quickViews.
   '''
   
-  def __init__(self):
+  def __init__(self, subsystemName=None):
     " Keep reference so QQuickViews not garbage collected.  But app usually does not reference it. "
     self.quickViews = []
-  
+    self.subsystemName = subsystemName  # name of subdirectory of .../resources/qml
+    
   
   def registerTypeInQml(self, typeToRegister):
     '''
@@ -55,8 +56,13 @@ class EmbeddedQmlManager(object):
     
     " Supporting machinery common to each "
     qmlFinder = QmlFinder() 
-    ## path = resourceMgr.pathToQMLResources() + 'views/'  # WAS "contextMenus/"
-    subpath = 'views/'  # !!! all interfaces must be in .../qml/views/ directory
+    
+    if self.subsystemName is None:
+      # Usually caller is the main app
+      subpath = 'views/'  # !!! all interfaces must be in .../qml/views/ directory
+    else:
+      # Usually caller is a subsystem
+      subpath = self.subsystemName + '/views/' # e.g. print/views
     
     for interface in interfaces:
       assert isinstance(interface, EmbeddedQmlInterface)
