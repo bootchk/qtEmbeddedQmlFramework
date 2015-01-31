@@ -6,6 +6,24 @@ from PyQt5.QtCore import QFileInfo, QUrl
 class ResourceManager(object):
   '''
   Knows how to find resources.
+  
+  When directories are structured as:
+  
+  app.py
+  app/       package for app
+     resources/
+        qml/
+           views/
+              mainView.qml
+           menus/
+              aMenu.qml
+        translations/
+           app.qm
+      package1   subpackage for app
+           
+  IOW resources directory is subdirectory of app's main package
+  
+  When you use pyqtdeploy, the entire package for app (including frozen modules, qml, and translations) is embedded in a .qrc file.
   '''
   
   def setResourceRoot(self, fileMainWasLoadedFrom, appPackageName):
@@ -21,41 +39,12 @@ class ResourceManager(object):
     print("Path to root: ", self._root)
     self._appPackageName = appPackageName
     
-  """
-  CRUFT  because we need a QUrl to QML resources, not a path.
-  This is code that doesn't work for embedded resources.
-  
-  def pathToQMLResources(self):
-    '''
-    QML for the main app.
-    Other subsystems may have QML resources in subdirectories such as /resources/qml/style.
-    QML resources must be in app's main package in directory /resources/qml/
     
-    If using an alternative (compiled resources using pyrcc5, deprecated)
-    then pensool_rc.py equals the 'resource' directory, so 'resource' is not a prefix.
-    Here, assume resources are a subdirectory of main app package.
-    '''
-    result = self.pathToAppsMainPackage() + '/resources/qml/'
-    print("Path to QML resources: ", result)
+  def getResourceRoot(self):
+    result = self._root + '/' + self._appPackageName
     return result
-    '''
-    FAILS return ":/qml/contextMenus/"  # Qt's notation for file resources (not url)
-    FAILS on iOS return config._root + '/resources/qml/contextMenus/'
-    '''
-    
-  def _qmlFilenameToQUrl(self,qmlFilename):
-    '''
-    Convert filename to QUrl.  Assert filename is relative to resources.
-    
-    Implementation: 
-    NOT 'qrc:/'.  See "Managing Resource Files with the Qt Resource System"
-    Instead, use as documented for PyQt.
-    '''
-    qmlUrl=QUrl(qmlFilename)
-    assert qmlUrl.isValid()
-    #assert qmlUrl.isLocalFile()
-    return qmlUrl
-  """
+  
+  
     
   def urlToQMLResource(self, resourceSubpath):
     '''
@@ -94,10 +83,49 @@ class ResourceManager(object):
   
     
   def pathToTranslationResources(self):
-    # TODO not correct
-    return "pensool/resources/translations/"
+    result = self.pathToAppsMainPackage() + 'translations/'
+    return result
   
   
 resourceMgr = ResourceManager()
+
+
+
+"""
+CRUFT  because we need a QUrl to QML resources, not a path.
+This is code that doesn't work for embedded resources.
+
+def pathToQMLResources(self):
+  '''
+  QML for the main app.
+  Other subsystems may have QML resources in subdirectories such as /resources/qml/style.
+  QML resources must be in app's main package in directory /resources/qml/
   
+  If using an alternative (compiled resources using pyrcc5, deprecated)
+  then pensool_rc.py equals the 'resource' directory, so 'resource' is not a prefix.
+  Here, assume resources are a subdirectory of main app package.
+  '''
+  result = self.pathToAppsMainPackage() + '/resources/qml/'
+  print("Path to QML resources: ", result)
+  return result
+  '''
+  FAILS return ":/qml/contextMenus/"  # Qt's notation for file resources (not url)
+  FAILS on iOS return config._root + '/resources/qml/contextMenus/'
+  '''
   
+def _qmlFilenameToQUrl(self,qmlFilename):
+  '''
+  Convert filename to QUrl.  Assert filename is relative to resources.
+  
+  Implementation: 
+  NOT 'qrc:/'.  See "Managing Resource Files with the Qt Resource System"
+  Instead, use as documented for PyQt.
+  '''
+  qmlUrl=QUrl(qmlFilename)
+  assert qmlUrl.isValid()
+  #assert qmlUrl.isLocalFile()
+  return qmlUrl
+"""
+  
+
+
