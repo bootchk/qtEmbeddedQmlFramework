@@ -1,11 +1,11 @@
 
-from PyQt5.QtCore import QUrl
 from PyQt5.QtQuick import QQuickView
 from PyQt5.QtQml import qmlRegisterType
 
 from qtEmbeddedQmlFramework.embeddedQmlInterface import EmbeddedQmlInterface
 from qtEmbeddedQmlFramework.qmlFinder import QmlFinder
 from qtEmbeddedQmlFramework.resourceManager import resourceMgr
+from qtEmbeddedQmlFramework.windowManager import windowMgr
 
 '''
 Running with Python as top: use pyrcc5 to compile resources into <app>_rc.py.
@@ -97,6 +97,12 @@ class EmbeddedQmlManager(object):
     '''
     print("Creating quickView")
     quickView = QQuickView()
+    
+    
+    # TEMP HACK
+    # set transientParent to the app's root window.
+    quickView.setTransientParent(windowMgr.getRootWindow())
+    
     '''
     qurl = self._qmlFilenameToQUrl(subpath + interface.qmlFilename)
     '''

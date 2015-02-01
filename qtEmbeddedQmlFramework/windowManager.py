@@ -22,21 +22,30 @@ class WindowManager():
     if len(qwinList)==1:
       result = qwinList[0]
     else:
-      # Raise exception? 
-      result = None
+      result = self._searchForRootWindow()
+    assert result is not None, "None top level window."
     print("App's single QWindow:", result)
-    
-    """
-    ALTERNATIVE?  Search for a single window of type QWindow?
-    
-    print("topLevelWindows():")
-    for win in qwinList:
-      print("window: ", win)
-    """
     self._topLevelWindow = result
     return result
 
 
+  def _searchForRootWindow(self):
+    '''
+    Iterate through top windows, finding first one of class QWindow.
+    Any others should be QQuickWindows (for displaying QML.)
+    '''
+    result = None
+    qwinList = QGuiApplication.topLevelWindows()
+    print("topLevelWindows():")
+    for win in qwinList:
+      print("window: ", win)
+      if win.__class__ == 'QWindow':
+        result = win
+        break
+    return result
+      
+  
+  
   def getRootWindow(self):
     '''
     Get root window found earlier.
